@@ -1,4 +1,4 @@
 # gomailer
-A golang package for sending mails with mailgun
+A golang package for sending mails with multiple email service providers
 
-Gomailer offers a simple API for sending mails using the mailgun API
+Gomailer offers a simple API for sending mails using mailgun, google & yahoo
