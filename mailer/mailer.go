@@ -1,90 +1,61 @@
 package mailer
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"gomailer/gmail"
 	"gomailer/mailgun"
-	"io/ioutil"
-	"os"
 )
 
-type mailerConfig struct {
-	DefaultSender string                `json:"sender"`
-	Provider      string                `json:"provider"`
-	MailgunConfig mailgun.MailgunConfig `json:"mailgun"`
-	GmailConfig   gmail.GmailConfig     `json:"gmail"`
-}
-
+// Message type contains the sender's email, the email's subject and body
+// PS: the sender's email can be left empty but make sure to initialize the default sender
+// with the SetDefaultSender function
 type Message struct {
+	Sender  string
 	Subject string
 	Body    string
 }
 
-var configs mailerConfig
+type mailgunCredentials struct {
+	domain string
+	apiKey string
+}
 
-const (
-	MailgunProvider = "mailgun"
-	GmailProvider   = "gmail"
-)
+var credentials mailgunCredentials
+var defaultSender string
 
-func Init(workingDir string) error {
+// SetCredentials takes the mailgun domain and the api key to initiate the connection with mailgun servers
+func SetCredentials(mailgunDomain, apiKey string) error {
 
-	file, err := os.Open(workingDir + "/config.json") // For read access.
-	if err != nil {
-		err = createConfigFile(workingDir)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = parseConfigFile(file)
-		if err != nil {
-			return err
-		}
+	if len(mailgunDomain) == 0 || len(apiKey) == 0 {
+		return errors.New("invalid credentials")
 	}
+
+	credentials = mailgunCredentials{
+		domain: mailgunDomain,
+		apiKey: apiKey,
+	}
+
 	return nil
 }
 
-func createConfigFile(workingDir string) error {
-	configFile, err := os.Create(workingDir + "/config.json")
-
-	if err != nil {
-		return err
-	}
-	defer configFile.Close()
-
-	configs := mailerConfig{
-		Provider:      MailgunProvider,
-		MailgunConfig: mailgun.MailgunConfig{},
-		GmailConfig:   gmail.GmailConfig{},
-	}
-
-	bx, err := json.Marshal(configs)
-	if err != nil {
-		return err
-	}
-
-	jsonData := string(bx)
-
-	fmt.Fprint(configFile, jsonData) // could also use file's write and sync methods
-	return nil
-}
-
-func parseConfigFile(file *os.File) error {
-	jsonData, err := ioutil.ReadAll(file)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(jsonData, &configs)
-	if err != nil {
-		return err
-	}
-	return nil
+// SetDefaultSender sets the default sender's email which helps in case you want to send multiple messages
+// without always specifying the sender
+func SetDefaultSender(senderEmail string) {
+	defaultSender = senderEmail
 }
 
 // Send sends the message with provided sender and recipient's email
 func (m Message) Send(recipients ...string) error {
-	status, id, err := mailgun.SendTextMessage(configs.MailgunConfig.Domain, configs.MailgunConfig.ApiKey, configs.DefaultSender, m.Subject, m.Body, recipients)
+
+	var messageSender string
+
+	if m.Sender == "" {
+		messageSender = defaultSender
+	} else {
+		messageSender = m.Sender
+	}
+
+	status, id, err := mailgun.SendTextMessage(credentials.domain, credentials.apiKey, messageSender, m.Subject, m.Body, recipients)
 	fmt.Println(status, id)
 	if err != nil {
 		return err
