@@ -7,11 +7,6 @@ import (
 	"github.com/mailgun/mailgun-go/v3"
 )
 
-type MailgunConfig struct {
-	Domain string `json:"domain"`
-	ApiKey string `json:"apiKey"`
-}
-
 func SendTextMessage(domain, apiKey, sender, subject, body string, recipients []string) (string, string, error) {
 	mg := mailgun.NewMailgun(domain, apiKey)
 	m := mg.NewMessage(sender, subject, body, recipients...)
