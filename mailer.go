@@ -1,4 +1,4 @@
-package mailer
+package gomailer
 
 import (
 	"errors"
