@@ -3,7 +3,8 @@ package gomailer
 import (
 	"errors"
 	"fmt"
-	"gomailer/mailgun"
+
+	"github.com/nizigama/gomailer/mailgun"
 )
 
 // Message type contains the sender's email, the email's subject and body
