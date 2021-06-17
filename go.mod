@@ -1,4 +1,4 @@
-module gomailer
+module github.com/nizigama/gomailer
 
 go 1.15
 
