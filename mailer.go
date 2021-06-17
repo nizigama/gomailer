@@ -46,7 +46,7 @@ func SetDefaultSender(senderEmail string) {
 }
 
 // Send sends the message with provided sender and recipient's email
-func (m Message) Send(recipients ...string) error {
+func (m Message) Send(recipients ...string) (string, string, error) {
 
 	var messageSender string
 
@@ -59,8 +59,8 @@ func (m Message) Send(recipients ...string) error {
 	status, id, err := mailgun.SendTextMessage(credentials.domain, credentials.apiKey, messageSender, m.Subject, m.Body, recipients)
 	fmt.Println(status, id)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
-	return nil
+	return status, id, nil
 }
