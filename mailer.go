@@ -174,7 +174,7 @@ func (m Message) SendEmailWithOneFileAttachment(attachment *os.File, recipients 
 	statusMessage, messageID, err := mg.Send(ctx, newMessage)
 
 	if err != nil {
-		return "", "", nil
+		return "", "", err
 	}
 
 	return statusMessage, messageID, nil
