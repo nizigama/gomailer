@@ -168,7 +168,7 @@ func (m Message) SendEmailWithOneFileAttachment(attachment *os.File, recipients 
 
 	newMessage.AddBufferAttachment(attachment.Name(), fileBytes)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*180)
 	defer cancel()
 
 	statusMessage, messageID, err := mg.Send(ctx, newMessage)
