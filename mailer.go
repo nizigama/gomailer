@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 // Message type contains the sender's email, the email's subject and body
 // PS: the sender's email can be left empty but make sure to initialize the default sender
-// with the SetDefaultSender function
+// with the SetDefaultSender function or during package initialization with Init() function
 type Message struct {
 	Sender  string
 	Subject string
@@ -100,7 +101,7 @@ func SetDefaultSender(senderEmail string) error {
 	return nil
 }
 
-// Send sends a simple text emailto the provided recipients' emails
+// Send sends a simple text email to the provided recipients' emails
 func (m Message) SendSimpleTextEmail(recipients ...string) (string, string, error) {
 
 	var messageSender string
@@ -123,6 +124,49 @@ func (m Message) SendSimpleTextEmail(recipients ...string) (string, string, erro
 	defer cancel()
 
 	statusMessage, messageID, err := mg.Send(ctx, newMessage)
+
+	if err != nil {
+		return "", "", nil
+	}
+
+	return statusMessage, messageID, nil
+}
+
+// Send sends an email with one attachment the provided recipients' emails
+func (m Message) SendEmailWithOneFileAttachment(attachment *os.File, recipients ...string) (string, string, error) {
+
+	var messageSender string
+
+	if strings.Trim(m.Sender, " ") == "" {
+
+		if credentials.defaultSender != "" {
+			messageSender = credentials.defaultSender
+		} else {
+			return "", "", fmt.Errorf("no default sender set")
+		}
+
+	} else {
+		messageSender = m.Sender
+	}
+
+	newMessageWithAttachment := mg.NewMIMEMessage(attachment, recipients...)
+
+	newMessageWithAttachment.AddHeader("From", fmt.Sprintf("KudiBooks Messaging API <%s>", messageSender))
+
+	for _, v := range recipients {
+
+		err := newMessageWithAttachment.AddRecipient(v)
+
+		if err != nil {
+			return "", "", err
+		}
+
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	statusMessage, messageID, err := mg.Send(ctx, newMessageWithAttachment)
 
 	if err != nil {
 		return "", "", nil
