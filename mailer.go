@@ -106,6 +106,7 @@ func SetDefaultSender(senderEmail string) error {
 }
 
 // Send sends a simple text email to the provided recipients' emails
+// The limit of recipients is 1000 by default
 func (m Message) SendSimpleTextEmail(recipients ...string) (string, string, error) {
 
 	var messageSender string
@@ -142,7 +143,8 @@ func (m Message) SendSimpleTextEmail(recipients ...string) (string, string, erro
 }
 
 // Send sends an email with one attachment the provided recipients' emails
-func (m Message) SendEmailWithOneFileAttachment(attachment *os.File, recipients ...string) (string, string, error) {
+// The limit of recipients is 1000 by default
+func (m Message) SendEmailWithFileAttachments(attachments []*os.File, recipients ...string) (string, string, error) {
 
 	var messageSender string
 
@@ -160,13 +162,15 @@ func (m Message) SendEmailWithOneFileAttachment(attachment *os.File, recipients 
 
 	newMessage := mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
 
-	fileBytes, err := ioutil.ReadAll(attachment)
+	for _, v := range attachments {
+		fileBytes, err := ioutil.ReadAll(v)
 
-	if err != nil {
-		return "", "", err
+		if err != nil {
+			return "", "", err
+		}
+
+		newMessage.AddBufferAttachment(v.Name(), fileBytes)
 	}
-
-	newMessage.AddBufferAttachment(attachment.Name(), fileBytes)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*180)
 	defer cancel()
