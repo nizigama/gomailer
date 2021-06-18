@@ -1,10 +1,13 @@
 package gomailer
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
-	"github.com/nizigama/gomailer/mailgun"
+	"github.com/mailgun/mailgun-go/v4"
 )
 
 // Message type contains the sender's email, the email's subject and body
@@ -16,51 +19,114 @@ type Message struct {
 	Body    string
 }
 
-type mailgunCredentials struct {
-	domain string
-	apiKey string
+type mailgunSettings struct {
+	domain        string
+	apiKey        string
+	inEURegion    bool
+	defaultSender string
 }
 
-var credentials mailgunCredentials
-var defaultSender string
+var credentials mailgunSettings
+var mg *mailgun.MailgunImpl
 
-// SetCredentials takes the mailgun domain and the api key to initiate the connection with mailgun servers
-func SetCredentials(mailgunDomain, apiKey string) error {
-
-	if len(mailgunDomain) == 0 || len(apiKey) == 0 {
+// Init initiates the mailgun configurations to start sending emails
+func Init(mailgunDomain, apiKey, defaultSender string, isInEURegion bool) error {
+	if len(strings.Trim(mailgunDomain, " ")) == 0 || len(strings.Trim(apiKey, " ")) == 0 {
 		return errors.New("invalid credentials")
 	}
 
-	credentials = mailgunCredentials{
-		domain: mailgunDomain,
-		apiKey: apiKey,
+	defaultSender = strings.Trim(defaultSender, " ")
+
+	if err := ValidateEmail(defaultSender); err != nil {
+		return err
+	}
+
+	credentials = mailgunSettings{
+		domain:        mailgunDomain,
+		apiKey:        apiKey,
+		inEURegion:    isInEURegion,
+		defaultSender: defaultSender,
+	}
+
+	mg = mailgun.NewMailgun(credentials.domain, credentials.apiKey)
+
+	if credentials.inEURegion {
+		mg.SetAPIBase(mailgun.APIBaseEU)
+	}
+
+	return nil
+}
+
+// ValidateEmail verifies if the email has a valid email format
+func ValidateEmail(email string) error {
+
+	if !strings.Contains(email, "@") || !strings.Contains(email, ".") {
+		return fmt.Errorf("invalid email")
+	}
+
+	parts := strings.Split(email, "@")
+
+	// if there is no content before or after the @ symbol
+	if len(parts[0]) == 0 || len(parts[1]) == 0 {
+		return fmt.Errorf("invalid email")
+	}
+
+	afterAtSymbol := strings.Split(parts[1], ".")
+	// if there is a dot after the @ symbol
+	if len(afterAtSymbol) < 2 {
+		return fmt.Errorf("invalid email")
+	}
+
+	// if there is content after the last dot(.)
+	if strings.Trim(afterAtSymbol[len(afterAtSymbol)-1], " ") == "" {
+		return fmt.Errorf("invalid email")
 	}
 
 	return nil
 }
 
 // SetDefaultSender sets the default sender's email which helps in case you want to send multiple messages
-// without always specifying the sender
-func SetDefaultSender(senderEmail string) {
-	defaultSender = senderEmail
+// without always specifying the sender.
+// Returns an error if the email doesn't have a valid email format
+func SetDefaultSender(senderEmail string) error {
+	senderEmail = strings.Trim(senderEmail, " ")
+
+	if err := ValidateEmail(senderEmail); err != nil {
+		return err
+	}
+
+	credentials.defaultSender = senderEmail
+
+	return nil
 }
 
-// Send sends the message with provided sender and recipient's email
-func (m Message) Send(isFromEU bool, recipients ...string) (string, string, error) {
+// Send sends a simple text emailto the provided recipients' emails
+func (m Message) SendSimpleTextEmail(recipients ...string) (string, string, error) {
 
 	var messageSender string
 
-	if m.Sender == "" {
-		messageSender = defaultSender
+	if strings.Trim(m.Sender, " ") == "" {
+
+		if credentials.defaultSender != "" {
+			messageSender = credentials.defaultSender
+		} else {
+			return "", "", fmt.Errorf("no default sender set")
+		}
+
 	} else {
 		messageSender = m.Sender
 	}
 
-	status, id, err := mailgun.SendTextMessage(credentials.domain, credentials.apiKey, messageSender, m.Subject, m.Body, recipients, isFromEU)
-	fmt.Println(status, id)
+	newMessage := mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	statusMessage, messageID, err := mg.Send(ctx, newMessage)
+
 	if err != nil {
-		return "", "", err
+		return "", "", nil
 	}
 
-	return status, id, nil
+	return statusMessage, messageID, nil
 }
