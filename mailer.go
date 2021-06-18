@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -157,24 +158,20 @@ func (m Message) SendEmailWithOneFileAttachment(attachment *os.File, recipients 
 		messageSender = m.Sender
 	}
 
-	newMessageWithAttachment := mg.NewMIMEMessage(attachment, recipients...)
+	newMessage := mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
 
-	newMessageWithAttachment.AddHeader("From", fmt.Sprintf("KudiBooks Messaging API <%s>", messageSender))
+	fileBytes, err := ioutil.ReadAll(attachment)
 
-	for _, v := range recipients {
-
-		err := newMessageWithAttachment.AddRecipient(v)
-
-		if err != nil {
-			return "", "", err
-		}
-
+	if err != nil {
+		return "", "", err
 	}
+
+	newMessage.AddBufferAttachment(attachment.Name(), fileBytes)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
-	statusMessage, messageID, err := mg.Send(ctx, newMessageWithAttachment)
+	statusMessage, messageID, err := mg.Send(ctx, newMessage)
 
 	if err != nil {
 		return "", "", nil
