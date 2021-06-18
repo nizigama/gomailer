@@ -38,8 +38,11 @@ func Init(mailgunDomain, apiKey, defaultSender string, isInEURegion bool) error 
 
 	defaultSender = strings.Trim(defaultSender, " ")
 
-	if err := ValidateEmail(defaultSender); err != nil {
-		return err
+	if defaultSender != "" {
+
+		if err := ValidateEmail(defaultSender); err != nil {
+			return err
+		}
 	}
 
 	credentials = mailgunSettings{
@@ -54,9 +57,6 @@ func Init(mailgunDomain, apiKey, defaultSender string, isInEURegion bool) error 
 	if credentials.inEURegion {
 		mg.SetAPIBase(mailgun.APIBaseEU)
 	}
-
-	fmt.Println("Initiation done!")
-	fmt.Println(mg)
 
 	return nil
 }
