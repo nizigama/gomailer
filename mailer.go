@@ -55,6 +55,9 @@ func Init(mailgunDomain, apiKey, defaultSender string, isInEURegion bool) error 
 		mg.SetAPIBase(mailgun.APIBaseEU)
 	}
 
+	fmt.Println("Initiation done!")
+	fmt.Println(mg)
+
 	return nil
 }
 
@@ -115,6 +118,11 @@ func (m Message) SendSimpleTextEmail(recipients ...string) (string, string, erro
 		}
 
 	} else {
+
+		if err := ValidateEmail(m.Sender); err != nil {
+			return "", "", err
+		}
+
 		messageSender = m.Sender
 	}
 
