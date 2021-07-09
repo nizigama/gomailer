@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strings"
 	"time"
 
@@ -19,6 +17,12 @@ type Message struct {
 	Sender  string
 	Subject string
 	Body    string
+}
+
+// MailAttachment holds the name of the email attachment along with the file data
+type MailAttachment struct {
+	Name     string
+	FileData []byte
 }
 
 type mailgunSettings struct {
@@ -144,7 +148,7 @@ func (m Message) SendSimpleTextEmail(recipients ...string) (string, string, erro
 
 // Send sends an email with one attachment the provided recipients' emails
 // The limit of recipients is 1000 by default
-func (m Message) SendEmailWithFileAttachments(attachments []*os.File, recipients ...string) (string, string, error) {
+func (m Message) SendEmailWithFileAttachments(attachments []MailAttachment, recipients ...string) (string, string, error) {
 
 	var messageSender string
 
@@ -163,13 +167,7 @@ func (m Message) SendEmailWithFileAttachments(attachments []*os.File, recipients
 	newMessage := mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
 
 	for _, v := range attachments {
-		fileBytes, err := ioutil.ReadAll(v)
-
-		if err != nil {
-			return "", "", err
-		}
-
-		newMessage.AddBufferAttachment(v.Name(), fileBytes)
+		newMessage.AddBufferAttachment(v.Name, v.FileData)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*180)
