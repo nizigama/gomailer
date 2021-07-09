@@ -111,7 +111,7 @@ func SetDefaultSender(senderEmail string) error {
 
 // Send sends a simple text email to the provided recipients' emails
 // The limit of recipients is 1000 by default
-func (m Message) SendSimpleTextEmail(recipients ...string) (string, string, error) {
+func (m Message) SendSimpleTextEmail(isHtml bool, recipients ...string) (string, string, error) {
 
 	var messageSender string
 
@@ -132,7 +132,15 @@ func (m Message) SendSimpleTextEmail(recipients ...string) (string, string, erro
 		messageSender = m.Sender
 	}
 
-	newMessage := mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
+	var newMessage *mailgun.Message
+
+	if isHtml {
+		newMessage = mg.NewMessage(messageSender, m.Subject, "", recipients...)
+
+		newMessage.SetHtml(m.Body)
+	} else {
+		newMessage = mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
