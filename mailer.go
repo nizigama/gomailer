@@ -189,3 +189,15 @@ func (m Message) SendEmailWithFileAttachments(attachments []MailAttachment, reci
 
 	return statusMessage, messageID, nil
 }
+
+// VerifyWebhookSignature is used to verify the authenticity of mailgun's webhooks
+// like delivered, opened, failed, ...
+func VerifyWebhookSignature(timestamp, token, signature string) (bool, error) {
+	mg := mailgun.NewMailgun(credentials.domain, credentials.apiKey)
+
+	return mg.VerifyWebhookSignature(mailgun.Signature{
+		TimeStamp: timestamp,
+		Token:     token,
+		Signature: signature,
+	})
+}
