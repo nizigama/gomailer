@@ -156,7 +156,7 @@ func (m Message) SendSimpleTextEmail(isHtml bool, recipients ...string) (string,
 
 // Send sends an email with one attachment the provided recipients' emails
 // The limit of recipients is 1000 by default
-func (m Message) SendEmailWithFileAttachments(attachments []MailAttachment, recipients ...string) (string, string, error) {
+func (m Message) SendEmailWithFileAttachments(attachments []MailAttachment, isHtml bool, recipients ...string) (string, string, error) {
 
 	var messageSender string
 
@@ -172,7 +172,15 @@ func (m Message) SendEmailWithFileAttachments(attachments []MailAttachment, reci
 		messageSender = m.Sender
 	}
 
-	newMessage := mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
+	var newMessage *mailgun.Message
+
+	if isHtml {
+		newMessage = mg.NewMessage(messageSender, m.Subject, "", recipients...)
+
+		newMessage.SetHtml(m.Body)
+	} else {
+		newMessage = mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
+	}
 
 	for _, v := range attachments {
 		newMessage.AddBufferAttachment(v.Name, v.FileData)
