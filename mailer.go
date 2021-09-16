@@ -8,15 +8,18 @@ import (
 	"time"
 
 	"github.com/mailgun/mailgun-go/v4"
+	"github.com/nizigama/gomailer/helpers"
 )
 
 // Message type contains the sender's email, the email's subject and body
 // PS: the sender's email can be left empty but make sure to initialize the default sender
 // with the SetDefaultSender function or during package initialization with Init() function
 type Message struct {
-	Sender  string
-	Subject string
-	Body    string
+	Sender     string
+	Subject    string
+	Body       string
+	InReplyTo  string
+	References []string
 }
 
 // MailAttachment holds the name of the email attachment along with the file data
@@ -111,7 +114,7 @@ func SetDefaultSender(senderEmail string) error {
 
 // Send sends a simple text email to the provided recipients' emails
 // The limit of recipients is 1000 by default
-func (m Message) SendSimpleTextEmail(isHtml bool, recipients ...string) (string, string, error) {
+func (m Message) SendSimpleTextEmail(isHtml, isReply bool, recipients ...string) (string, string, error) {
 
 	var messageSender string
 
@@ -138,8 +141,41 @@ func (m Message) SendSimpleTextEmail(isHtml bool, recipients ...string) (string,
 		newMessage = mg.NewMessage(messageSender, m.Subject, "", recipients...)
 
 		newMessage.SetHtml(m.Body)
+
+		if isReply {
+			if err := helpers.VerifyMessageID(m.InReplyTo); err != nil {
+				return "", "", err
+			}
+
+			for _, v := range m.References {
+				if err := helpers.VerifyMessageID(v); err != nil {
+					return "", "", err
+				}
+
+			}
+
+			newMessage.AddHeader("In-Reply-To", m.InReplyTo)
+			newMessage.AddHeader("References", strings.Join(m.References, " "))
+		}
+
 	} else {
 		newMessage = mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
+
+		if isReply {
+			if err := helpers.VerifyMessageID(m.InReplyTo); err != nil {
+				return "", "", err
+			}
+
+			for _, v := range m.References {
+				if err := helpers.VerifyMessageID(v); err != nil {
+					return "", "", err
+				}
+
+			}
+
+			newMessage.AddHeader("In-Reply-To", m.InReplyTo)
+			newMessage.AddHeader("References", strings.Join(m.References, " "))
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
@@ -148,7 +184,7 @@ func (m Message) SendSimpleTextEmail(isHtml bool, recipients ...string) (string,
 	statusMessage, messageID, err := mg.Send(ctx, newMessage)
 
 	if err != nil {
-		return "", "", nil
+		return "", "", err
 	}
 
 	return statusMessage, messageID, nil
@@ -156,7 +192,7 @@ func (m Message) SendSimpleTextEmail(isHtml bool, recipients ...string) (string,
 
 // Send sends an email with one attachment the provided recipients' emails
 // The limit of recipients is 1000 by default
-func (m Message) SendEmailWithFileAttachments(attachments []MailAttachment, isHtml bool, recipients ...string) (string, string, error) {
+func (m Message) SendEmailWithFileAttachments(attachments []MailAttachment, isHtml, isReply bool, recipients ...string) (string, string, error) {
 
 	var messageSender string
 
@@ -178,8 +214,40 @@ func (m Message) SendEmailWithFileAttachments(attachments []MailAttachment, isHt
 		newMessage = mg.NewMessage(messageSender, m.Subject, "", recipients...)
 
 		newMessage.SetHtml(m.Body)
+
+		if isReply {
+			if err := helpers.VerifyMessageID(m.InReplyTo); err != nil {
+				return "", "", err
+			}
+
+			for _, v := range m.References {
+				if err := helpers.VerifyMessageID(v); err != nil {
+					return "", "", err
+				}
+
+			}
+
+			newMessage.AddHeader("In-Reply-To", m.InReplyTo)
+			newMessage.AddHeader("References", strings.Join(m.References, " "))
+		}
 	} else {
 		newMessage = mg.NewMessage(messageSender, m.Subject, m.Body, recipients...)
+
+		if isReply {
+			if err := helpers.VerifyMessageID(m.InReplyTo); err != nil {
+				return "", "", err
+			}
+
+			for _, v := range m.References {
+				if err := helpers.VerifyMessageID(v); err != nil {
+					return "", "", err
+				}
+
+			}
+
+			newMessage.AddHeader("In-Reply-To", m.InReplyTo)
+			newMessage.AddHeader("References", strings.Join(m.References, " "))
+		}
 	}
 
 	for _, v := range attachments {
